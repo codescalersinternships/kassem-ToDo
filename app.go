@@ -3,83 +3,88 @@ package main
 import (
 	"encoding/json"
 	"log"
-	"math/rand"
 	"net/http"
 	"strconv"
-
 	"github.com/gorilla/mux"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
 )
+//gorm db
+var dsn = "root:password@tcp(127.0.0.1:3306)/Todo?charset=utf8mb4&parseTime=True&loc=Local"
+var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 type Todo struct {
-	Id    string `json:"id"`
-	Task  string `json:"task"`
-	State bool   `json:"done"`
+	ID     int    `gorm:"autoIncrement" json:"id"`
+	Task   string `json:"task"`
+	Status bool   `json:"done"`
 }
 
-// get all tasks in todo list
+//get all tasks in todo list
 func todos(w http.ResponseWriter, r *http.Request) {
+
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(list)
+	var tasks []Todo
+	db.Find(&tasks)
+
+	json.NewEncoder(w).Encode(tasks)
+	w.WriteHeader(http.StatusOK)
 
 }
 func todo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
 	params := mux.Vars(r)
-	for _, item := range list {
-		if item.Id == params["id"] {
-			json.NewEncoder(w).Encode(item)
-			return
-		}
-	}
-	json.NewEncoder(w).Encode(&Todo{})
+	//convert params id to int
+	id, _ := strconv.Atoi(params["id"])
+	var tasks = Todo{ID: id}
+	db.Find(&tasks, id)
+	json.NewEncoder(w).Encode(&tasks)
+	w.WriteHeader(http.StatusOK)
 
 }
 func newTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var task Todo
+	//get body data
 	_ = json.NewDecoder(r.Body).Decode(&task)
-	task.Id = strconv.Itoa(rand.Intn(100000)) //mock id
-	list = append(list, task)
-	json.NewEncoder(w).Encode(task)
+	db.Create(&task)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&task)
 
 }
+
 func updateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	var tmp Todo
-	_ = json.NewDecoder(r.Body).Decode(&tmp)
-	for index, task := range list {
-		if task.Id == params["id"] {
-			list = append(list[:index], list[index+1:]...)
-			tmp.Id = params["id"]
-			list = append(list, tmp)
-			json.NewEncoder(w).Encode(tmp)
-			break
-		}
-	}
-
+	//convert params id to int
+	id, _ := strconv.Atoi(params["id"])
+	var task = Todo{ID: id}
+	db.Find(&task)
+	_ = json.NewDecoder(r.Body).Decode(&task)
+	db.Save(&task)
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&task)
 }
+
 func remove(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	for index, item := range list {
-		if item.Id == params["id"] {
-			list = append(list[:index], list[index+1:]...)
-			break
-		}
-	}
-	json.NewEncoder(w).Encode(list)
+	//convert params id to int
+	id, _ := strconv.Atoi(params["id"])
+	var task = Todo{ID: id}
+	db.Delete(&task)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("200 - Task deleted"))
 }
-
-var list []Todo
 
 func main() {
 	//init route
 	mux := mux.NewRouter()
 
-	// mock data
-	list = append(list, Todo{Id: "1", Task: "test", State: false}, Todo{Id: "3", Task: "test@2", State: false})
+	// create table if not exists
+	if !(db.Migrator().HasTable(&Todo{})) {
+		log.Println("table { todos } created")
+		db.Migrator().CreateTable(&Todo{})
+	}
 
 	// route endpoint handler
 	mux.HandleFunc("/api/todos", todos).Methods("GET")
