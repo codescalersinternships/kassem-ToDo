@@ -5,10 +5,12 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+
 	"github.com/gorilla/mux"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
+
 //gorm db
 var dsn = "root:password@tcp(127.0.0.1:3306)/Todo?charset=utf8mb4&parseTime=True&loc=Local"
 var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
@@ -34,11 +36,11 @@ func todo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	//convert params id to int
-	id, _ := strconv.Atoi(params["id"])
+	id, _ := strconv.Atoi(params["taskId"])
 	var tasks = Todo{ID: id}
 	db.Find(&tasks, id)
-	json.NewEncoder(w).Encode(&tasks)
 	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(&tasks)
 
 }
 func newTask(w http.ResponseWriter, r *http.Request) {
@@ -47,8 +49,8 @@ func newTask(w http.ResponseWriter, r *http.Request) {
 	//get body data
 	_ = json.NewDecoder(r.Body).Decode(&task)
 	db.Create(&task)
-	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(&task)
+	w.WriteHeader(http.StatusOK)
 
 }
 
@@ -56,7 +58,7 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	//convert params id to int
-	id, _ := strconv.Atoi(params["id"])
+	id, _ := strconv.Atoi(params["taskId"])
 	var task = Todo{ID: id}
 	db.Find(&task)
 	_ = json.NewDecoder(r.Body).Decode(&task)
@@ -69,7 +71,7 @@ func remove(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	//convert params id to int
-	id, _ := strconv.Atoi(params["id"])
+	id, _ := strconv.Atoi(params["taskId"])
 	var task = Todo{ID: id}
 	db.Delete(&task)
 	w.WriteHeader(http.StatusOK)
@@ -88,10 +90,10 @@ func main() {
 
 	// route endpoint handler
 	mux.HandleFunc("/api/todos", todos).Methods("GET")
-	mux.HandleFunc("/api/todo/{id}", todo).Methods("GET")
+	mux.HandleFunc("/api/todo/{taskId}", todo).Methods("GET")
 	mux.HandleFunc("/api/todo", newTask).Methods("POST")
-	mux.HandleFunc("/api/todo/{id}", updateTask).Methods("PUT")
-	mux.HandleFunc("/api/todo/{id}", remove).Methods("DELETE")
+	mux.HandleFunc("/api/todo/{taskId}", updateTask).Methods("PUT")
+	mux.HandleFunc("/api/todo/{taskId}", remove).Methods("DELETE")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 
 }

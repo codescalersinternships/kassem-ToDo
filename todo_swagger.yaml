@@ -1,0 +1,153 @@
+---
+openapi: 3.0.0
+info:
+  title: To do app
+  description: todo application repo https://github.com/codescalersinternships/kassem-ToDo
+  version: 1.0.0
+servers:
+- url: https://virtserver.swaggerhub.com/OMARKASSEM099/ToDo-Go/1.0.0
+  description: SwaggerHub API Auto Mocking
+paths:
+  /todos:
+    get:
+      tags:
+      - todo
+      summary: get all todo tasks
+      operationId: GETAll
+      responses:
+        "200":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/tasks'
+        "500":
+          description: faild due server error
+  /todo:
+    post:
+      summary: add task to todo list
+      operationId: AddTask
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/task'
+      responses:
+        "201":
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/task'
+        "400":
+          description: bad request
+        "500":
+          description: faild due server error
+  /todo{taskId}:
+    get:
+      summary: get task by Id
+      operationId: getTask
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          example: 23
+      responses:
+        "200":
+          description: Success response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/task'
+        "400":
+          description: bad request
+        "500":
+          description: faild due server error
+    put:
+      summary: update task by Id
+      operationId: updateTask
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          example: 23
+      responses:
+        "200":
+          description: updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/task'
+        "400":
+          description: bad request
+        "500":
+          description: faild due server error
+    delete:
+      summary: get task by Id
+      operationId: deleteTask
+      parameters:
+      - name: taskId
+        in: path
+        required: true
+        style: simple
+        explode: false
+        schema:
+          type: integer
+          example: 23
+      responses:
+        "200":
+          description: deleted
+        "400":
+          description: bad request
+        "500":
+          description: faild due server error
+components:
+  schemas:
+    task:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 3
+        task:
+          type: string
+          example: create tests
+        status:
+          type: boolean
+          example: false
+    tasks:
+      type: array
+      example:
+      - id: 1
+        task: task1
+        done: true
+      - id: 3
+        task: task2
+        done: true
+      - id: 5
+        task: task3
+        done: true
+      - id: 6
+        task: task4
+        done: true
+      items:
+        $ref: '#/components/schemas/tasks_inner'
+    tasks_inner:
+      properties:
+        todo:
+          type: object
+          properties:
+            id:
+              type: integer
+            task:
+              type: string
+            status:
+              type: boolean
