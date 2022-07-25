@@ -14,6 +14,9 @@ services:
       MYSQL_USER: "${MYSQL_USER}"
       MYSQL_PORT: "${MYSQL_PORT}"
     container_name: db_mysql
+    healthcheck:
+      test: mysqladmin ping -h ${MYSQL_HOST} -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+
   go-test1: 
     image: go-test
     environment:
@@ -26,7 +29,9 @@ services:
     ports:
     - 8080:8081
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+
    
     container_name: goApp 
     
