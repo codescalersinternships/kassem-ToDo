@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -12,13 +14,23 @@ import (
 )
 
 //gorm db
-var dsn = "root:password@tcp(127.0.0.1:3306)/Todo?charset=utf8mb4&parseTime=True&loc=Local"
-var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+// "root:password@tcp(127.0.0.1:3306)/Todo?charset=utf8mb4&parseTime=True&loc=Local"
+var dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_HOST"), os.Getenv("MYSQL_PORT"), os.Getenv("MYSQL_DATABASE"))
+
+var db, errorDB = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 type Todo struct {
 	ID     int    `gorm:"autoIncrement" json:"id"`
 	Task   string `json:"task"`
 	Status bool   `json:"done"`
+}
+
+func home(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode("Todo home")
+	w.WriteHeader(http.StatusOK)
 }
 
 //get all tasks in todo list
@@ -49,8 +61,12 @@ func newTask(w http.ResponseWriter, r *http.Request) {
 	//get body data
 	_ = json.NewDecoder(r.Body).Decode(&task)
 	db.Create(&task)
-	json.NewEncoder(w).Encode(&task)
-	w.WriteHeader(http.StatusOK)
+	if errorDB == nil {
+		json.NewEncoder(w).Encode(&task)
+		w.WriteHeader(http.StatusOK)
+	} else {
+		log.Fatalln(db.Error)
+	}
 
 }
 
@@ -79,9 +95,13 @@ func remove(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	fmt.Println("editor:", os.Getenv("EDITOR"))
+	fmt.Println(dsn)
 	//init route
 	mux := mux.NewRouter()
-
+	// if errorDB != nil {
+	// 	log.Fatal(errorDB)
+	// }
 	// create table if not exists
 	if !(db.Migrator().HasTable(&Todo{})) {
 		log.Println("table { todos } created")
@@ -89,11 +109,12 @@ func main() {
 	}
 
 	// route endpoint handler
+	mux.HandleFunc("/", home)
 	mux.HandleFunc("/api/todos", todos).Methods("GET")
 	mux.HandleFunc("/api/todo/{taskId}", todo).Methods("GET")
 	mux.HandleFunc("/api/todo", newTask).Methods("POST")
 	mux.HandleFunc("/api/todo/{taskId}", updateTask).Methods("PUT")
 	mux.HandleFunc("/api/todo/{taskId}", remove).Methods("DELETE")
-	log.Fatal(http.ListenAndServe(":8080", mux))
+	log.Fatal(http.ListenAndServe(":8081", mux))
 
 }
