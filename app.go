@@ -15,11 +15,8 @@ import (
 
 //gorm db
 
-// "root:password@tcp(127.0.0.1:3306)/Todo?charset=utf8mb4&parseTime=True&loc=Local"
 var dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
 	os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_HOST"), os.Getenv("MYSQL_PORT"), os.Getenv("MYSQL_DATABASE"))
-
-var db, errorDB = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 type Todo struct {
 	ID     int    `gorm:"autoIncrement" json:"id"`
@@ -35,7 +32,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 //get all tasks in todo list
 func todos(w http.ResponseWriter, r *http.Request) {
-
+	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	w.Header().Set("Content-Type", "application/json")
 	var tasks []Todo
 	db.Find(&tasks)
@@ -44,8 +41,10 @@ func todos(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 }
+
 func todo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	params := mux.Vars(r)
 	//convert params id to int
 	id, _ := strconv.Atoi(params["taskId"])
@@ -56,10 +55,12 @@ func todo(w http.ResponseWriter, r *http.Request) {
 
 }
 func newTask(w http.ResponseWriter, r *http.Request) {
+	var db, errorDB = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	w.Header().Set("Content-Type", "application/json")
 	var task Todo
 	//get body data
 	_ = json.NewDecoder(r.Body).Decode(&task)
+	db.AutoMigrate(&Todo{})
 	db.Create(&task)
 	if errorDB == nil {
 		json.NewEncoder(w).Encode(&task)
@@ -72,6 +73,7 @@ func newTask(w http.ResponseWriter, r *http.Request) {
 
 func updateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	params := mux.Vars(r)
 	//convert params id to int
 	id, _ := strconv.Atoi(params["taskId"])
@@ -85,6 +87,7 @@ func updateTask(w http.ResponseWriter, r *http.Request) {
 
 func remove(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	params := mux.Vars(r)
 	//convert params id to int
 	id, _ := strconv.Atoi(params["taskId"])
@@ -92,17 +95,20 @@ func remove(w http.ResponseWriter, r *http.Request) {
 	db.Delete(&task)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("200 - Task deleted"))
+
 }
 
 func main() {
 	fmt.Println("editor:", os.Getenv("EDITOR"))
 	fmt.Println(dsn)
+	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	//init route
 	mux := mux.NewRouter()
 	// if errorDB != nil {
 	// 	log.Fatal(errorDB)
 	// }
 	// create table if not exists
+
 	if !(db.Migrator().HasTable(&Todo{})) {
 		log.Println("table { todos } created")
 		db.Migrator().CreateTable(&Todo{})
