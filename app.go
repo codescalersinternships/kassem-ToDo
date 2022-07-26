@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -16,7 +17,7 @@ type Database struct {
 	DB *gorm.DB
 }
 
-const DB_FILE = "./data/todo.db"
+var DB_FILE = os.Getenv("DB_FILE")
 
 type ToDo struct {
 	ID   int    `gorm:"primaryKey"`
@@ -131,7 +132,6 @@ func (db *Database) updateTask(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(params["taskId"])
 	if id != task.ID {
 		dd := message{MSG: "Task not found"}
-		log.Println(task.ID)
 		json.NewEncoder(w).Encode(dd)
 		w.WriteHeader(http.StatusOK)
 		return
@@ -184,7 +184,7 @@ func main() {
 	db := Database{}
 	var err error
 	db.DB, err = gorm.Open(sqlite.Open(DB_FILE), &gorm.Config{})
-
+	log.Println(DB_FILE)
 	if err != nil {
 		panic("couldn't connect")
 	}
