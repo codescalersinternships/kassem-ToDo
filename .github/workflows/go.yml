@@ -29,4 +29,4 @@ jobs:
           context: .
           file: ./Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/todo_1
+          tags: ${{DOCKER_USERNAME}}/todo_1:sqlite
