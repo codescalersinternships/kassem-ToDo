@@ -20,4 +20,11 @@ jobs:
 
     - name: Build
       run: go build -v ./...
-
+      
+    - name: Build and Push Docker Image
+      uses: mr-smithers-excellent/docker-build-push@v4
+      with:
+        image: 0om4r/todo_1
+        registry: docker.io
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
