@@ -2,125 +2,203 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 //gorm db
+type Database struct {
+	DB *gorm.DB
+}
 
-var dsn = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-	os.Getenv("MYSQL_USER"), os.Getenv("MYSQL_PASSWORD"), os.Getenv("MYSQL_HOST"), os.Getenv("MYSQL_PORT"), os.Getenv("MYSQL_DATABASE"))
+const DB_FILE = "./data/todo.db"
 
-type Todo struct {
-	ID     int    `gorm:"autoIncrement" json:"id"`
-	Task   string `json:"task"`
-	Status bool   `json:"done"`
+type ToDo struct {
+	ID   int    `gorm:"primaryKey"`
+	Task string `gorm:"not null;default:null" json:"task"`
+	Done bool   `json:"done"`
+}
+
+type message struct {
+	MSG string `json:"msg"`
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode("Todo home")
+	json.NewEncoder(w).Encode("ToDo home")
 	w.WriteHeader(http.StatusOK)
 }
 
 //get all tasks in todo list
-func todos(w http.ResponseWriter, r *http.Request) {
-	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+func (db *Database) getALlToDo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var tasks []Todo
-	db.Find(&tasks)
-
+	var tasks []ToDo
+	res := db.DB.Find(&tasks)
+	if res.Error != nil {
+		json.NewEncoder(w).Encode("Error :" + res.Error.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(tasks)
 	w.WriteHeader(http.StatusOK)
 
 }
 
-func todo(w http.ResponseWriter, r *http.Request) {
+//get task from database by id
+func (db *Database) getTodo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	params := mux.Vars(r)
-	//convert params id to int
-	id, _ := strconv.Atoi(params["taskId"])
-	var tasks = Todo{ID: id}
-	db.Find(&tasks, id)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(&tasks)
+	var res ToDo
+	id := params["taskId"]
+	findErr := db.DB.Find(&res, id).Error
+	if findErr == nil {
+		if res.ID != 0 {
+			json.NewEncoder(w).Encode(&res)
+			w.WriteHeader(http.StatusOK)
+			return
+		} else {
+			dd := message{MSG: "Task not found"}
 
+			json.NewEncoder(w).Encode(dd)
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+	} else {
+		log.Println(error(findErr))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(findErr)
+		return
+	}
 }
-func newTask(w http.ResponseWriter, r *http.Request) {
-	var db, errorDB = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+// add new task to todo database
+func (db *Database) newTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var task Todo
+	var task ToDo
 	//get body data
-	_ = json.NewDecoder(r.Body).Decode(&task)
-	db.AutoMigrate(&Todo{})
-	db.Create(&task)
-	if errorDB == nil {
+	err := json.NewDecoder(r.Body).Decode(&task)
+	if err != nil {
+		log.Fatalln(err.Error())
+		json.NewEncoder(w).Encode(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	creationErr := db.DB.Create(&task).Error
+	if creationErr != nil {
+		log.Println(error(creationErr))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(creationErr)
+		return
+	} else {
 		json.NewEncoder(w).Encode(&task)
 		w.WriteHeader(http.StatusOK)
-	} else {
-		log.Fatalln(db.Error)
+		return
+
 	}
 
 }
 
-func updateTask(w http.ResponseWriter, r *http.Request) {
+func (db *Database) updateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	params := mux.Vars(r)
-	//convert params id to int
+	//storing the updated info in tmp
+	var tmp ToDo
+
+	err := json.NewDecoder(r.Body).Decode(&tmp)
+	if err != nil {
+		log.Fatalln(err.Error())
+		json.NewEncoder(w).Encode(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	var task ToDo
+	findErr := db.DB.Find(&task, params["taskId"]).Error
+
+	if findErr != nil {
+		log.Println(error(findErr))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(findErr)
+		return
+	}
 	id, _ := strconv.Atoi(params["taskId"])
-	var task = Todo{ID: id}
-	db.Find(&task)
-	_ = json.NewDecoder(r.Body).Decode(&task)
-	db.Save(&task)
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(&task)
+	if id != task.ID {
+		dd := message{MSG: "Task not found"}
+		log.Println(task.ID)
+		json.NewEncoder(w).Encode(dd)
+		w.WriteHeader(http.StatusOK)
+		return
+
+	}
+	task.Task = tmp.Task
+	task.Done = tmp.Done
+	updateErr := db.DB.Save(&task).Error
+
+	if updateErr != nil {
+		log.Println(error(updateErr))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(updateErr)
+		return
+	} else {
+		json.NewEncoder(w).Encode(&task)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 }
 
-func remove(w http.ResponseWriter, r *http.Request) {
+func (db *Database) removeTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+
+	//get body data
 	params := mux.Vars(r)
-	//convert params id to int
-	id, _ := strconv.Atoi(params["taskId"])
-	var task = Todo{ID: id}
-	db.Delete(&task)
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("200 - Task deleted"))
+	id := params["taskId"]
+	DeleteErr := db.DB.Delete(&ToDo{}, id)
+	if DeleteErr.Error != nil {
+		log.Println(error(DeleteErr.Error))
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(DeleteErr.Error)
+		return
+	} else if DeleteErr.RowsAffected != 1 {
+		//json.NewEncoder(w).Encode(&task)
+		dd := message{MSG: "Task not found"}
+		json.NewEncoder(w).Encode(dd)
+		w.WriteHeader(http.StatusOK)
+		return
+	} else {
+		dd := message{MSG: "Task with id: " + id + ", deleted successfully"}
+		json.NewEncoder(w).Encode(dd)
+		w.WriteHeader(http.StatusOK)
+		return
+	}
 
 }
 
 func main() {
-	fmt.Println("editor:", os.Getenv("EDITOR"))
-	fmt.Println(dsn)
-	var db, _ = gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db := Database{}
+	var err error
+	db.DB, err = gorm.Open(sqlite.Open(DB_FILE), &gorm.Config{})
+
+	if err != nil {
+		panic("couldn't connect")
+	}
+	db.DB.AutoMigrate(&ToDo{})
 	//init route
 	mux := mux.NewRouter()
-	// if errorDB != nil {
-	// 	log.Fatal(errorDB)
-	// }
-	// create table if not exists
-
-	if !(db.Migrator().HasTable(&Todo{})) {
-		log.Println("table { todos } created")
-		db.Migrator().CreateTable(&Todo{})
-	}
 
 	// route endpoint handler
 	mux.HandleFunc("/", home)
-	mux.HandleFunc("/api/todos", todos).Methods("GET")
-	mux.HandleFunc("/api/todo/{taskId}", todo).Methods("GET")
-	mux.HandleFunc("/api/todo", newTask).Methods("POST")
-	mux.HandleFunc("/api/todo/{taskId}", updateTask).Methods("PUT")
-	mux.HandleFunc("/api/todo/{taskId}", remove).Methods("DELETE")
-	log.Fatal(http.ListenAndServe(":8081", mux))
+	mux.HandleFunc("/api/todos", db.getALlToDo).Methods("GET")
+	mux.HandleFunc("/api/todo/{taskId}", db.getTodo).Methods("GET")
+	mux.HandleFunc("/api/todo", db.newTask).Methods("POST")
+	mux.HandleFunc("/api/todo/{taskId}", db.updateTask).Methods("PUT")
+	mux.HandleFunc("/api/todo/{taskId}", db.removeTask).Methods("DELETE")
+	log.Fatal(http.ListenAndServe(":8080", mux))
 
 }
