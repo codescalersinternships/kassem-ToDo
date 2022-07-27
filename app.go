@@ -54,9 +54,9 @@ func (db *Database) getALlToDo(w http.ResponseWriter, r *http.Request) {
 //get task from database by id
 func (db *Database) getTodo(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r)
+
 	var res ToDo
-	id := params["taskId"]
+	id := r.URL.Query().Get("taskId")
 	findErr := db.DB.Find(&res, id).Error
 	if findErr == nil {
 		if res.ID != 0 {
@@ -70,7 +70,6 @@ func (db *Database) getTodo(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
-
 	} else {
 		log.Println(error(findErr))
 		w.WriteHeader(http.StatusBadRequest)
@@ -94,9 +93,10 @@ func (db *Database) newTask(w http.ResponseWriter, r *http.Request) {
 
 	creationErr := db.DB.Create(&task).Error
 	if creationErr != nil {
-		log.Println(error(creationErr))
+		dd := message{MSG: "creation error, make sure to add task"}
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(creationErr)
+		json.NewEncoder(w).Encode(dd)
+		
 		return
 	} else {
 		json.NewEncoder(w).Encode(&task)
@@ -109,7 +109,7 @@ func (db *Database) newTask(w http.ResponseWriter, r *http.Request) {
 
 func (db *Database) updateTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	params := mux.Vars(r)
+	id := r.URL.Query().Get("taskId")
 	//storing the updated info in tmp
 	var tmp ToDo
 
@@ -121,7 +121,7 @@ func (db *Database) updateTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var task ToDo
-	findErr := db.DB.Find(&task, params["taskId"]).Error
+	findErr := db.DB.Find(&task, id).Error
 
 	if findErr != nil {
 		log.Println(error(findErr))
@@ -129,8 +129,8 @@ func (db *Database) updateTask(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(findErr)
 		return
 	}
-	id, _ := strconv.Atoi(params["taskId"])
-	if id != task.ID {
+	id_int, _ := strconv.Atoi(id)
+	if id_int != task.ID {
 		dd := message{MSG: "Task not found"}
 		json.NewEncoder(w).Encode(dd)
 		w.WriteHeader(http.StatusOK)
@@ -157,8 +157,8 @@ func (db *Database) removeTask(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	//get body data
-	params := mux.Vars(r)
-	id := params["taskId"]
+	id := r.URL.Query().Get("taskId")
+
 	DeleteErr := db.DB.Delete(&ToDo{}, id)
 	if DeleteErr.Error != nil {
 		log.Println(error(DeleteErr.Error))
@@ -194,11 +194,11 @@ func main() {
 
 	// route endpoint handler
 	mux.HandleFunc("/", home)
-	mux.HandleFunc("/api/todos", db.getALlToDo).Methods("GET")
-	mux.HandleFunc("/api/todo/{taskId}", db.getTodo).Methods("GET")
+	mux.HandleFunc("/api/todo/all", db.getALlToDo).Methods("GET")
+	mux.HandleFunc("/api/todo/", db.getTodo).Methods("GET")
 	mux.HandleFunc("/api/todo", db.newTask).Methods("POST")
-	mux.HandleFunc("/api/todo/{taskId}", db.updateTask).Methods("PUT")
-	mux.HandleFunc("/api/todo/{taskId}", db.removeTask).Methods("DELETE")
+	mux.HandleFunc("/api/todo/", db.updateTask).Methods("PUT")
+	mux.HandleFunc("/api/todo/", db.removeTask).Methods("DELETE")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 
 }
