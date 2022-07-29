@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	
 	"strconv"
@@ -125,13 +124,6 @@ func (a *App) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		w.Write(res)
 	}
-}
-
-func logTimeMiddleware(handler http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("fefefe")
-		handler.ServeHTTP(w, r)
-	})
 }
 
 func NewApp(DB_FILE, Port string, router http.Handler) (App, error) {
