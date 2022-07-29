@@ -5,11 +5,12 @@ services:
     environment: 
       - DB_FILE="todo.db"
     volumes:
-      - ./:/todo.db
+      - go-todo:/home/tmp
     ports:
     - 8080:8080
-   
-
-   
-    container_name: goApp 
+    container_name: goApp
+  volumes:
+       go-todo:
+          local
+     
   

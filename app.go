@@ -4,115 +4,82 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
 
-	"github.com/gorilla/mux"
-	"gorm.io/driver/sqlite"
+	//"strconv"
+	// "github.com/gorilla/mux"
+	//	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
 //gorm db
-type Database struct {
-	DB *gorm.DB
-}
 
-var DB_FILE = os.Getenv("DB_FILE")
-
-type ToDo struct {
-	ID   int    `gorm:"primaryKey"`
-	Task string `gorm:"not null;default:null" json:"task"`
-	Done bool   `json:"done"`
-}
-
-type message struct {
-	MSG string `json:"msg"`
-}
-
-func home(w http.ResponseWriter, r *http.Request) {
+func (a *App) home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode("ToDo home")
 	w.WriteHeader(http.StatusOK)
 }
 
-//get all tasks in todo list
-func (db *Database) getALlToDo(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	var tasks []ToDo
-	res := db.DB.Find(&tasks)
-	if res.Error != nil {
-		json.NewEncoder(w).Encode("Error :" + res.Error.Error())
+func (a *App) getALlToDoHandler(w http.ResponseWriter, r *http.Request) {
+	// 	w.Header().Set("Content-Type", "application/json")
+
+	res, err := a.db.GetALlToDo()
+	if err != nil {
+		json.NewEncoder(w).Encode("Error :" + err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(tasks)
 	w.WriteHeader(http.StatusOK)
+	w.Write(res)
 
 }
 
-//get task from database by id
-func (db *Database) getTodo(w http.ResponseWriter, r *http.Request) {
+func (a *App) getTodoByIdHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
-	var res ToDo
 	id := r.URL.Query().Get("taskId")
-	findErr := db.DB.Find(&res, id).Error
-	if findErr == nil {
-		if res.ID != 0 {
-			json.NewEncoder(w).Encode(&res)
-			w.WriteHeader(http.StatusOK)
-			return
-		} else {
-			dd := message{MSG: "Task not found"}
-
-			json.NewEncoder(w).Encode(dd)
-			w.WriteHeader(http.StatusOK)
-			return
-		}
+	res, err := a.db.GetTodoById(id)
+	if err == gorm.ErrRecordNotFound {
+		errResp := Response{Response: "Task not found"}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(errResp)
+	} else if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(&err)
 	} else {
-		log.Println(error(findErr))
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(findErr)
-		return
+		w.WriteHeader(http.StatusOK)
+		w.Write(res)
 	}
 }
 
 // add new task to todo database
-func (db *Database) newTask(w http.ResponseWriter, r *http.Request) {
+func (a *App) newTaskHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	var task ToDo
 	//get body data
 	err := json.NewDecoder(r.Body).Decode(&task)
 	if err != nil {
-		log.Fatalln(err.Error())
-		json.NewEncoder(w).Encode(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err.Error())
 		return
 	}
 
-	creationErr := db.DB.Create(&task).Error
-	if creationErr != nil {
-		dd := message{MSG: "creation error, make sure to add task"}
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(dd)
-		
-		return
-	} else {
-		json.NewEncoder(w).Encode(&task)
-		w.WriteHeader(http.StatusOK)
-		return
+	resp, respErr := a.db.AddTodo(&task)
 
+	if respErr != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(respErr)
+	} else {
+		w.WriteHeader(http.StatusOK)
+		w.Write(resp)
 	}
 
 }
 
-func (db *Database) updateTask(w http.ResponseWriter, r *http.Request) {
+func (a *App) updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	id := r.URL.Query().Get("taskId")
-	//storing the updated info in tmp
 	var tmp ToDo
-
 	err := json.NewDecoder(r.Body).Decode(&tmp)
 	if err != nil {
 		log.Fatalln(err.Error())
@@ -120,85 +87,57 @@ func (db *Database) updateTask(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	var task ToDo
-	findErr := db.DB.Find(&task, id).Error
-
-	if findErr != nil {
-		log.Println(error(findErr))
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(findErr)
-		return
-	}
-	id_int, _ := strconv.Atoi(id)
-	if id_int != task.ID {
-		dd := message{MSG: "Task not found"}
-		json.NewEncoder(w).Encode(dd)
-		w.WriteHeader(http.StatusOK)
-		return
-
-	}
-	task.Task = tmp.Task
-	task.Done = tmp.Done
-	updateErr := db.DB.Save(&task).Error
-
-	if updateErr != nil {
-		log.Println(error(updateErr))
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(updateErr)
-		return
+	res, err := a.db.UpdateTodo(&tmp, id)
+	if err == gorm.ErrRecordNotFound {
+		errResp := Response{Response: "Task not found"}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(errResp)
+	} else if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(&err)
 	} else {
-		json.NewEncoder(w).Encode(&task)
 		w.WriteHeader(http.StatusOK)
-		return
+		w.Write(res)
 	}
+
 }
 
-func (db *Database) removeTask(w http.ResponseWriter, r *http.Request) {
+func (a *App) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-
-	//get body data
 	id := r.URL.Query().Get("taskId")
+	res, err := a.db.DeleteTask(id)
 
-	DeleteErr := db.DB.Delete(&ToDo{}, id)
-	if DeleteErr.Error != nil {
-		log.Println(error(DeleteErr.Error))
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(DeleteErr.Error)
+		json.NewEncoder(w).Encode(err.Error())
 		return
-	} else if DeleteErr.RowsAffected != 1 {
-		//json.NewEncoder(w).Encode(&task)
-		dd := message{MSG: "Task not found"}
-		json.NewEncoder(w).Encode(dd)
-		w.WriteHeader(http.StatusOK)
-		return
+	} else if err == gorm.ErrRecordNotFound {
+		errResp := Response{Response: "Task not found"}
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(errResp)
 	} else {
-		dd := message{MSG: "Task with id: " + id + ", deleted successfully"}
-		json.NewEncoder(w).Encode(dd)
-		w.WriteHeader(http.StatusOK)
-		return
-	}
+		w.Write(res)
+		w.WriteHeader(http.StatusNoContent)
 
+	}
 }
 
-func main() {
-	db := Database{}
-	var err error
-	db.DB, err = gorm.Open(sqlite.Open(DB_FILE), &gorm.Config{})
-	log.Println(DB_FILE)
+func logTimeMiddleware(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println("fefefe")
+		handler.ServeHTTP(w, r)
+	})
+}
+
+func NewApp(DB_FILE, Port string, router http.Handler) (App, error) {
+	a := App{}
+	a.db = &database{}
+	a.server = &http.Server{}
+	err := a.db.connectDatabase(DB_FILE)
 	if err != nil {
-		panic("couldn't connect")
+		return a, err
 	}
-	db.DB.AutoMigrate(&ToDo{})
-	//init route
-	mux := mux.NewRouter()
-
-	// route endpoint handler
-	mux.HandleFunc("/", home)
-	mux.HandleFunc("/api/todo/all", db.getALlToDo).Methods("GET")
-	mux.HandleFunc("/api/todo/", db.getTodo).Methods("GET")
-	mux.HandleFunc("/api/todo", db.newTask).Methods("POST")
-	mux.HandleFunc("/api/todo/", db.updateTask).Methods("PUT")
-	mux.HandleFunc("/api/todo/", db.removeTask).Methods("DELETE")
-	log.Fatal(http.ListenAndServe(":8080", mux))
-
+	a.server.Addr = Port
+	a.server.Handler = router
+	return a, nil
 }
