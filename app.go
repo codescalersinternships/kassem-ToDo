@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-
-	//"strconv"
+	
+	"strconv"
 	// "github.com/gorilla/mux"
 	//	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -20,15 +20,16 @@ func (a *App) home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) getALlToDoHandler(w http.ResponseWriter, r *http.Request) {
-	// 	w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Content-Type", "application/json")
 
 	res, err := a.db.GetALlToDo()
 	if err != nil {
-		json.NewEncoder(w).Encode("Error :" + err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode("Error :" + err.Error())
+	
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
+	
 	w.WriteHeader(http.StatusOK)
 	w.Write(res)
 
@@ -41,7 +42,7 @@ func (a *App) getTodoByIdHandler(w http.ResponseWriter, r *http.Request) {
 	res, err := a.db.GetTodoById(id)
 	if err == gorm.ErrRecordNotFound {
 		errResp := Response{Response: "Task not found"}
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(errResp)
 	} else if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -65,7 +66,6 @@ func (a *App) newTaskHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	resp, respErr := a.db.AddTodo(&task)
-
 	if respErr != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(respErr)
@@ -80,17 +80,23 @@ func (a *App) updateTaskHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	id := r.URL.Query().Get("taskId")
 	var tmp ToDo
+	tmp.ID,_=strconv.Atoi(id)
 	err := json.NewDecoder(r.Body).Decode(&tmp)
 	if err != nil {
-		log.Fatalln(err.Error())
-		json.NewEncoder(w).Encode(err.Error())
 		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(err.Error())
+		return
+	}
+	if tmp.Task ==""{
+		errResp := Response{Response: "Make sure to add task"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(errResp)
 		return
 	}
 	res, err := a.db.UpdateTodo(&tmp, id)
 	if err == gorm.ErrRecordNotFound {
 		errResp := Response{Response: "Task not found"}
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(errResp)
 	} else if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -107,18 +113,17 @@ func (a *App) DeleteTaskHandler(w http.ResponseWriter, r *http.Request) {
 	id := r.URL.Query().Get("taskId")
 	res, err := a.db.DeleteTask(id)
 
-	if err != nil {
+	 if err == gorm.ErrRecordNotFound {
+		errResp := Response{Response: "Task not found"}
 		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(errResp)
+	}else if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(err.Error())
 		return
-	} else if err == gorm.ErrRecordNotFound {
-		errResp := Response{Response: "Task not found"}
-		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(errResp)
 	} else {
-		w.Write(res)
 		w.WriteHeader(http.StatusNoContent)
-
+		w.Write(res)
 	}
 }
 
