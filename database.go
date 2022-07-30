@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -11,10 +10,10 @@ import (
 
 func (d *database)connectDatabase(path string) error   {
 	d.DB, d.err = gorm.Open(sqlite.Open(path), &gorm.Config{
-		Logger :logger.Default.LogMode(logger.Silent),
+		 Logger :logger.Default.LogMode(logger.Silent),
 	})
 	
-		return d.err
+	return d.err
 }
 
 func (d *database) GetALlToDo() ([]byte, error) {

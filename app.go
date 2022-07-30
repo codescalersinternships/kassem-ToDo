@@ -3,11 +3,9 @@ package main
 import (
 	"encoding/json"
 	"net/http"
-	
 	"strconv"
-	// "github.com/gorilla/mux"
-	//	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+
 )
 
 //gorm db
@@ -131,10 +129,7 @@ func NewApp(DB_FILE, Port string, router http.Handler) (App, error) {
 	a.db = &database{}
 	a.server = &http.Server{}
 	err := a.db.connectDatabase(DB_FILE)
-	if err != nil {
-		return a, err
-	}
 	a.server.Addr = Port
 	a.server.Handler = router
-	return a, nil
+	return a, err
 }

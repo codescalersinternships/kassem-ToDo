@@ -8,8 +8,6 @@ import (
 	"os"
 	"testing"
 	"github.com/gorilla/mux"
-	//"gorm.io/driver/sqlite"
-	//"gorm.io/gorm"
 )
 
 func MakeTempFile(t testing.TB) string {
