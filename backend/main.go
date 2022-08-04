@@ -29,7 +29,14 @@ func main() {
 	}
    
 	DB_FILE := os.Getenv("DB_FILE")
+	if DB_FILE == "" {
+		DB_FILE ="./todo.db"
+	}
 	Port := os.Getenv("Port")
+	if Port == "" {
+		Port = ":5000"
+	}
+	
 	r := mux.NewRouter()
 	c := cors.AllowAll()
 	handler := c.Handler(r)
