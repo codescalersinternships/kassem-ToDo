@@ -1,0 +1,16 @@
+version: '3'
+services:  
+  go-todo: 
+    image: 0om4r/todo_1:sqlite
+    environment: 
+      - DB_FILE="todo.db"
+    volumes:
+      - go-todo:/home/tmp
+    ports:
+    - 8080:8080
+    container_name: goApp
+  volumes:
+       go-todo:
+          local
+     
+  
