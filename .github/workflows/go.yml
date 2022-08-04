@@ -22,6 +22,11 @@ jobs:
         go-version: 1.18
 
     - name: Test
-      run: go test -v ./...
+      run: |
+       cd backend
+       export DB_FILE="./todo.db"
+       export Port=":5000"
+       go test -v ./...
+    
     - name: code coverage
       run: go test -cover
