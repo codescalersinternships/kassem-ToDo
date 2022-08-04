@@ -22,8 +22,6 @@ jobs:
     - name: Build and Push Docker Image
       uses: docker/build-push-action@v3
       with:
-          context: .
-          directory: "./backend"
-          file: ./Dockerfile
+          context: ./backend
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/todo_1:sqlite
