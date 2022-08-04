@@ -9,7 +9,7 @@ import (
 	"testing"
 	"github.com/gorilla/mux"
 )
-
+var Port = ":5000"
 func MakeTempFile(t testing.TB) string {
 	f, err := os.CreateTemp("", "go-sqlite-test")
 	defer f.Close()
@@ -32,7 +32,7 @@ func TestGetALlToDo(t *testing.T) {
 		testApp.db.DB.Create(&ToDo{Task: "second todo"})
 		testApp.db.DB.Create(&ToDo{Task: "third todo"})
 		request := httptest.NewRequest(http.MethodGet, "localhost:8080/api/todo/all", nil)
-		response := httptest.NewRecorder()
+		response:= httptest.NewRecorder()
 		testApp.getALlToDoHandler(response, request)
 		got := response.Body.String()
 		want := "[{\"ID\":1,\"task\":\"first todo\",\"done\":false},{\"ID\":2,\"task\":\"second todo\",\"done\":false},{\"ID\":3,\"task\":\"third todo\",\"done\":false}]"
@@ -56,20 +56,7 @@ func TestGetALlToDo(t *testing.T) {
 			t.Errorf("got %q want %q", got, want)
 		}
 	})
-	t.Run("Get all to do with empty file", func(t *testing.T) {
-		file := MakeTempFile(t)
-		defer os.Remove(file)
-		r := mux.NewRouter()
-		testApp, appErr := NewApp(file, Port, r)
-		request := httptest.NewRequest(http.MethodGet, "localhost:8080/api/todo", nil)
-		response := httptest.NewRecorder()
-		testApp.getALlToDoHandler(response, request)
-		got := response.Result().StatusCode
-		want := 500
-		if got != want || appErr != nil {
-			t.Errorf("got %q want %q", got, want)
-		}
-	})
+	
 
 }
 
@@ -117,9 +104,9 @@ func TestGetTodoHandler(t *testing.T) {
 		response := httptest.NewRecorder()
 		testApp.getTodoByIdHandler(response, request)
 		got := response.Result().StatusCode
-		want := 500
+		want := 400
 		if got != want || appErr != nil {
-			t.Errorf("got %q want %q", got, want)
+			t.Errorf("got %v want %v", got, want)
 		}
 	})
 
@@ -302,12 +289,11 @@ func TestDeleteTaskHandler(t *testing.T) {
 		defer os.Remove(file)
 		r := mux.NewRouter()
 		testApp, appErr := NewApp(file, Port, r)
-		testApp.db.DB.Create(&ToDo{ID: 2, Task: "old todo"})
 		request := httptest.NewRequest(http.MethodPut, "localhost:8080/api/todo/?taskId=2",nil)
 		response := httptest.NewRecorder()
 		testApp.DeleteTaskHandler(response, request)
 		got := response.Result().StatusCode
-		want := 500
+		want := 400
 		if got != want || appErr != nil {
 			t.Errorf("got %v want %v", got, want)
 		}
