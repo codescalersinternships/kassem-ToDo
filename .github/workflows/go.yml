@@ -29,4 +29,6 @@ jobs:
        go test -v ./...
     
     - name: code coverage
-      run: go test -cover
+      run: |
+        cd backend
+        go test -cover
