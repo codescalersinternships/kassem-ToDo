@@ -22,6 +22,8 @@ jobs:
         go-version: 1.18
 
     - name: Test
-      run: go test -v ./...
+      run: |
+       cd backend
+       go test -v ./...
     - name: code coverage
       run: go test -cover
