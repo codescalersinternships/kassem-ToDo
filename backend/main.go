@@ -24,9 +24,7 @@ func logTimeMiddleware(handler http.Handler) http.Handler {
 
 func main() {
 	err := godotenv.Load()
-	if err != nil {
-	  log.Fatal("Error loading .env file")
-	}
+
    
 	DB_FILE := os.Getenv("DB_FILE")
 	if DB_FILE == "" {
