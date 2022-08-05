@@ -1,0 +1,9 @@
+name: Docker Compose 
+on: push
+jobs:
+  test_cypress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build the stack
+        run: docker-compose up -d
