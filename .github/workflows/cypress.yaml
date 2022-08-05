@@ -4,6 +4,16 @@ jobs:
   test_cypress:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - name: Build the stack
-        run: docker-compose up -d
+    - uses: actions/checkout@v2
+    - name: Build the stack
+      run: docker-compose up -d
+    
+    - name: run cypress tests
+      run: |
+        cd frontend
+        npm i
+        npx cypress run
+        
+        
+      
+    
