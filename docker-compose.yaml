@@ -2,21 +2,25 @@ version: '3'
 services:  
   
   todo_backend: 
-    image: 0om4r/todo_1:be
+    build: ./backend
     environment: 
-      - DB_FILE="todo.db"
+      - DB_FILE="./todo.db"
       - Port=":5000"
     ports:
       - 5000:5000
     container_name: goApp
+    volumes:
+      - go-todo:/home/tmp
     restart: always
- 
+
 
     ## 
   todo_frontend:
-    image: 0om4r/todo_1:fe
+    build: ./frontend
     ports:
       - 8080:8080
     depends_on:
-      - backend
-  
+      - todo_backend
+volumes: 
+    go-todo: 
+    

@@ -2,15 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 
 	"gorm.io/gorm"
 )
-
- 
-
 
 func (a *App) home(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
@@ -143,6 +142,7 @@ func NewApp(DB_FILE, Port string, router http.Handler) (App, error) {
 	a.server = &http.Server{}
 	err := a.db.connectDatabase(DB_FILE)
 	fmt.Printf("start sever on port: %s\n", Port)
+	
 	a.db.DB.AutoMigrate(&ToDo{})
 	a.server.Addr = Port
 	a.server.Handler = router

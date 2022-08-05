@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -41,8 +40,6 @@ func main() {
 	app, err := NewApp(DB_FILE, Port, handler)
 	if err != nil {
 		panic("couldn't connect to database path" + DB_FILE + " due to error: " + err.Error())
-	} else {
-		fmt.Printf("Success, listing on port %v\n", Port)
 	}
 	// r.Use(corsMiddleware)
 	r.Use(logTimeMiddleware)
