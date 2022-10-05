@@ -1,4 +1,6 @@
 #!/bin/sh
+service nginx restart 
+nginx -s reload
 mkdir -p /var/run/sshd
 mkdir -p /root/.ssh/ 
 chmod 600 ~/.ssh
