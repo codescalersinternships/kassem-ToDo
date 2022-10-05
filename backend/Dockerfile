@@ -12,7 +12,7 @@ ENV Port=":5000"
 RUN go build -o main
 EXPOSE 5000
 RUN chmod +x start.sh
-CMD ["sh", "./start.sh"]
+CMD ["/app/start.sh"]
 # FROM golang:latest as builder
 
 # WORKDIR /app
