@@ -11,6 +11,7 @@ echo $SSH_KEY > /root/.ssh/authorized_keys
 /usr/sbin/sshd
 echo root:hamada | chpasswd
 service ssh status
+nginx -s reload
 service nginx restart
 
 cd /app
