@@ -4,7 +4,8 @@ WORKDIR /app
 RUN apt-get update
 ENV DEBIAN_FRONTEND=noninteractive \
 TZ=Etc/UTC 
-RUN apt install -y golang-go openssh-server
+RUN apt install -y golang-go openssh-server nginx
+COPY default.config /etc/nginx/conf.d/
 COPY . /app
 RUN go mod download
 ENV DB_FILE="./todo.db"
