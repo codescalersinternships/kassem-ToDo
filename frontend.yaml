@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: frontend
+  labels:
+    app: front 
+spec:
+  containers:
+  - name: frontend
+    image: 0om4r/todo_1:fe
+    imagePullPolicy: Always
+    ports:
+    - containerPort: 8080
