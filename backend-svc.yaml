@@ -12,5 +12,7 @@ spec:
   ports:
   - name: back
     port: 5000
+    nodePort: 30008
     protocol: TCP
     targetPort: 5000
+  type: NodePort

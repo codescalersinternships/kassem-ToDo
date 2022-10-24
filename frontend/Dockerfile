@@ -1,7 +1,7 @@
 FROM node:14-alpine
 
 WORKDIR /usr/src/app
-
+ENV CYPRESS_INSTALL_BINARY=0
 COPY rollup.config.js ./
 COPY package*.json ./
 
