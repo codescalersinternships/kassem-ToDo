@@ -1,10 +1,11 @@
 import axios from 'axios';
 
-const baseUrl = "http://localhost:5000/api/"
+const baseUrl = BACKEND_URL
+console.log(baseUrl )
 export default class TodoApi{
      static async getAll(){
           try {
-               const res = await axios.get(`http://localhost:5000/api/`+"todo/all")
+               const res = await axios.get(baseUrl+"todo/all")
                return res.data
           }catch(err) {
                console.log(err)
