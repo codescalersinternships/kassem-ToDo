@@ -9,8 +9,7 @@ RUN npm install
 
 COPY ./src ./src
 COPY ./public ./public
-
-RUN npm run-script build
+COPY build-env.sh ./
 EXPOSE 8080
 ENV HOST=0.0.0.0
-CMD [ "npm", "start" ]
+CMD [ "sh", "build-env.sh" ]

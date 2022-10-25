@@ -1,7 +1,8 @@
 import axios from 'axios';
-
+import  BACKEND_URL from "./config";
 const baseUrl = BACKEND_URL
-console.log(baseUrl)
+
+console.log(BACKEND_URL )
 export default class TodoApi{
      static async getAll(){
           try {
