@@ -1,0 +1,42 @@
+# Default values for todo.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+replicaCount: 1
+
+frontendContainer:
+  image:
+    repository: 0om4r/todo
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "script.1"
+  name: "frontend"
+  containerPort: 8080
+
+backendContainer:
+  name: "backend"
+  image:
+    repository: 0om4r/todo_1
+    pullPolicy: Always
+    # Overrides the image tag whose default is the chart appVersion.
+    tag: "ubu.nginx.1"
+    name: ""
+  containerPort: 5000
+
+service:
+  type: NodePort
+  front:
+    name: frontend
+    nodePort: 30007
+    port: 8080
+    targetPort: 8080
+  back:
+    name: backend
+    port: 5000
+    nodePort: 30008
+    targetPort: 5000
+    selector:
+      key: app
+      value: server
+
+

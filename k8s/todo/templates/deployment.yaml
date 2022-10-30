@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: server-deployment
+spec:
+  selector:
+    matchLabels:
+      app: server
+  template:
+    metadata:
+      name: server-pod
+      labels:
+        app: server
+    spec:
+        containers:
+        - name: {{.Values.frontendContainer.name}}
+          image: {{.Values.frontendContainer.image.repository}}:{{.Values.frontendContainer.image.tag}}
+          imagePullPolicy: {{.Values.frontendContainer.image.pullPolicy}}
+          ports:
+          - containerPort: {{.Values.frontendContainer.containerPort}}
+        - name: backend
+          image: {{.Values.backendContainer.image.repository}}:{{.Values.backendContainer.image.tag}}
+          imagePullPolicy: {{.Values.backendContainer.image.pullPolicy}}
+          ports:
+          - containerPort: {{.Values.backendContainer.containerPort}}
+
+           
